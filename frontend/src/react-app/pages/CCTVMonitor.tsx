@@ -65,15 +65,8 @@ export default function CCTVMonitor() {
 
           <div className="flex items-center gap-4">
             <Link to="/" className="text-sm text-muted-foreground hover:text-foreground"> Home </Link>
-            <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground"> Dashboard </Link>
             <Link to="/cctv" className="text-sm font-medium text-primary"> CCTV Monitor </Link>
 
-            <Button size="sm" variant="outline" className="relative">
-              <Bell className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
-                3
-              </span>
-            </Button>
           </div>
         </div>
       </nav>

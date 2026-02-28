@@ -78,12 +78,6 @@ export default function HomePage() {
             </Link>
 
             <Link
-              to="/dashboard"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground">
-              Dashboard
-            </Link>
-
-            <Link
               to="/cctv"
               className="text-sm font-medium text-muted-foreground hover:text-foreground">
               CCTV Monitor
@@ -124,9 +118,6 @@ export default function HomePage() {
               </Button>
             </a>
 
-            <Button size="lg" variant="outline" asChild>
-              <Link to="/dashboard">View Dashboard</Link>
-            </Button>
           </div>
         </div>
       </section>

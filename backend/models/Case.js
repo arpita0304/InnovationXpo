@@ -1,19 +1,44 @@
 const mongoose = require("mongoose");
 
-const caseSchema = new mongoose.Schema({
-  name: String,
-  age: Number,
-  gender: String,
-  area: String,
-  photo: String,
-  lastSeenLocation: String,
-  lastSeenTime: Date,
-  cameraMatched: String,
-  zoneStatus: String,
-  createdAt: {
-    type: Date,
-    default: Date.now
+const caseSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    age: {
+      type: Number,
+      required: true
+    },
+    gender: {
+      type: String,
+      required: true
+    },
+    area: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    photo: {
+      type: String
+    },
+    lastSeenLocation: {
+      type: String
+    },
+    lastSeenTime: {
+      type: Date
+    },
+    cameraMatched: {
+      type: String
+    },
+    zoneStatus: {
+      type: String
+    }
+  },
+  {
+    timestamps: true
   }
-});
+);
 
 module.exports = mongoose.model("Case", caseSchema);

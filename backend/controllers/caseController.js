@@ -6,6 +6,13 @@ const registerCase = async (req, res) => {
   try {
     const { name, age, gender, area } = req.body;
 
+    // Basic validation
+    if (!name || !age || !gender || !area) {
+      return res.status(400).json({
+        message: "All fields (name, age, gender, area) are required"
+      });
+    }
+
     const photoPath = req.file ? req.file.path : null;
 
     let matchResult = {
@@ -18,7 +25,7 @@ const registerCase = async (req, res) => {
       try {
         matchResult = await runFaceMatch(photoPath);
       } catch (err) {
-        console.log("Face match error:", err);
+        console.log("Face match error:", err.message);
       }
     }
 
@@ -36,24 +43,38 @@ const registerCase = async (req, res) => {
       zoneStatus
     });
 
+    console.log("Case registered:", newCase._id);
+
     res.status(201).json(newCase);
+
   } catch (error) {
+    console.error("Register error:", error.message);
     res.status(500).json({ message: error.message });
   }
 };
 
 const getAllCases = async (req, res) => {
-  const cases = await Case.find().sort({ createdAt: -1 });
-  res.json(cases);
+  try {
+    const cases = await Case.find().sort({ createdAt: -1 });
+    res.json(cases);
+  } catch (error) {
+    console.error("Fetch error:", error.message);
+    res.status(500).json({ message: error.message });
+  }
 };
 
 const getZoneStats = async (req, res) => {
-  const { area } = req.params;
+  try {
+    const { area } = req.params;
 
-  const count = await Case.countDocuments({ area });
-  const zoneStatus = await calculateZoneStatus(area);
+    const count = await Case.countDocuments({ area });
+    const zoneStatus = await calculateZoneStatus(area);
 
-  res.json({ area, count, zoneStatus });
+    res.json({ area, count, zoneStatus });
+  } catch (error) {
+    console.error("Zone error:", error.message);
+    res.status(500).json({ message: error.message });
+  }
 };
 
 module.exports = {

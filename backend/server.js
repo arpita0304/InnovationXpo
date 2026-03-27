@@ -19,6 +19,13 @@ app.get("/", (req, res) => {
   res.send("AI Missing Person Tracker API Running");
 });
 
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "Backend running",
+    time: new Date()
+  });
+});
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, "0.0.0.0", () => {

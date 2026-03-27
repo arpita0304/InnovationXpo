@@ -25,7 +25,7 @@ import {
   SelectValue,
 } from "@/react-app/components/ui/select";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
+const BACKEND_URL = "http://localhost:5000";
 
 const steps = [
   { icon: Upload, title: "Register", description: "Submit missing person details and photo" },
@@ -77,8 +77,9 @@ export default function HomePage() {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Registration failed");
+        const text = await res.text();
+        console.error("Backend error:", text);
+        throw new Error("Server error — check console");
       }
 
       setStatus("success");

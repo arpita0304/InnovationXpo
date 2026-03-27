@@ -167,7 +167,6 @@ export default function CCTVMonitor() {
           </div>
           <div className="flex items-center gap-5">
             <Link to="/" className="text-sm text-gray-500 hover:text-black">Home</Link>
-            <Link to="/dashboard" className="text-sm text-gray-500 hover:text-black">Dashboard</Link>
             <Link to="/cctv" className="text-sm font-medium text-blue-600">CCTV Monitor</Link>
             {/* Socket status pill */}
             <div className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full font-medium ${socketConnected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>

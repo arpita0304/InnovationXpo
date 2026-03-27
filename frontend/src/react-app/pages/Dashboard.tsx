@@ -1,101 +1,94 @@
-import { Shield, Play } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
-import { io } from "socket.io-client";
+import { useEffect, useState } from "react";
+import { data, Link } from "react-router-dom";
+import {
+  Shield,
+  Users,
+  MapPin,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  RefreshCw,
+  Camera,
+  Search,
+} from "lucide-react";
 
-const socket = io("http://localhost:5000", {
-  autoConnect: false,
-});
+const BACKEND_URL = "http://localhost:5000";
 
-export default function CCTVMonitor() {
+type Case = {
+  _id: string;
+  name: string;
+  age: number;
+  gender: string;
+  area: string;
+  photo?: string;
+  lastSeenLocation?: string;
+  lastSeenTime?: string;
+  cameraMatched?: string;
+  zoneStatus?: string;
+  createdAt: string;
+};
 
-  const cameras = [
-  {
-    name: "CAM01",
-    location: "College",
-    online: true,
-    video: "https://guardianai-videos.s3.ap-south-1.amazonaws.com/CAM1.mp4"
-  },
-  {
-    name: "CAM02",
-    location: "Shopping Mall",
-    online: true,
-    video: "https://guardianai-videos.s3.ap-south-1.amazonaws.com/CAM2.mp4"
-  },
-  {
-    name: "CAM03",
-    location: "Bus Stand",
-    online: false,
-    video: ""
-  },
-  {
-    name: "CAM04",
-    location: "Railway Station",
-    online: true,
-    video: "https://guardianai-videos.s3.ap-south-1.amazonaws.com/CAM3.mp4"
-  },
-  {
-    name: "CAM05",
-    location: "Highway",
-    online: true,
-    video: "https://guardianai-videos.s3.ap-south-1.amazonaws.com/cam4.mp4"
-  },
-  {
-    name: "CAM06",
-    location: "Bhaji Market",
-    online: false,
-    video: ""
-  },
-];
+const getZoneBadge = (zone?: string) => {
+  if (!zone) return { label: "UNKNOWN", cls: "bg-gray-100 text-gray-600" };
+  const z = zone.toUpperCase();
+  if (z === "HIGH") return { label: "HIGH RISK", cls: "bg-red-100 text-red-700" };
+  if (z === "MEDIUM") return { label: "MEDIUM", cls: "bg-yellow-100 text-yellow-700" };
+  return { label: "LOW", cls: "bg-green-100 text-green-700" };
+};
 
-  const [selectedCamera, setSelectedCamera] = useState(cameras[0]);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [detectedPerson, setDetectedPerson] = useState<any>(null);
+const formatDate = (iso: string) => {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) +
+    " · " + d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+};
 
-  // ================= SOCKET LISTENER =================
-  useEffect(() => {
+export default function Dashboard() {
+  const [cases, setCases] = useState<Case[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [lastRefresh, setLastRefresh] = useState(new Date());
 
-    socket.connect();
-
-    socket.on("matchFound", (data) => {
-
-      console.log("🔥 MATCH RECEIVED:", data);
-
-      setSelectedCamera({
-        name: data.camera,
-        location: data.location,
-        online: true,
-        video: `http://localhost:5000/${data.video}`
-      });
-
-      setIsPlaying(true);
-
-      setDetectedPerson({
-        name: data.name,
-        location: data.location,
-        time: data.time,
-        zoneAlertness: data.zoneAlertness,
-        screenshot: `http://localhost:5000/${data.screenshot.replace(/\\/g, "/")}`
-      });
-
-    });
-
-    return () => {
-      socket.off("matchFound");
-      socket.disconnect();
-    };
-
-  }, []);
-
-  const getZoneColor = (zone: string) => {
-    if (zone === "HIGH") return "bg-red-600";
-    if (zone === "MEDIUM") return "bg-yellow-500";
-    return "bg-green-600";
+  const fetchCases = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/cases`);
+      if (!res.ok) throw new Error("Failed to fetch cases");
+      const data = await res.json();
+      setCases(data);
+      setLastRefresh(new Date());
+    } catch (err: any) {
+      setError(err.message || "Could not load cases");
+    } finally {
+      setLoading(false);
+    }
+    console.log("Fetched cases:", data);
   };
 
-  return (
-    <div className="min-h-screen bg-gray-100">
+  useEffect(() => {
+    fetchCases();
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchCases, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
+  const filtered = cases.filter(
+    (c) =>
+      c.name.toLowerCase().includes(search.toLowerCase()) ||
+      c.area.toLowerCase().includes(search.toLowerCase())
+  );
+
+  // Stats
+  const total = cases.length;
+  const highRisk = cases.filter((c) => c.zoneStatus?.toUpperCase() === "HIGH").length;
+  const matched = cases.filter((c) => c.cameraMatched).length;
+  const today = cases.filter(
+    (c) => new Date(c.createdAt).toDateString() === new Date().toDateString()
+  ).length;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
       {/* NAVBAR */}
       <nav className="bg-white border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
@@ -108,112 +101,186 @@ export default function CCTVMonitor() {
               <p className="text-xs text-gray-500">Missing Person Surveillance</p>
             </div>
           </div>
-
-          <div className="flex items-center gap-4">
-
+          <div className="flex items-center gap-5">
             <Link to="/" className="text-sm text-gray-500 hover:text-black">Home</Link>
-            <Link to="/dashboard" className="text-sm text-gray-500 hover:text-black">Dashboard</Link>
-            <Link to="/cctv" className="text-sm font-medium text-blue-600">CCTV Monitor</Link>
-
+            <Link to="/dashboard" className="text-sm font-medium text-blue-600">Dashboard</Link>
+            <Link to="/cctv" className="text-sm text-gray-500 hover:text-black">CCTV Monitor</Link>
           </div>
         </div>
       </nav>
 
-      <div className="px-10 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-8">
 
-        <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-          CCTV Surveillance Monitor
-        </h2>
-
-        <div className="grid grid-cols-2 gap-8">
-
-          {/* VIDEO PANEL */}
-          <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-            <div className="px-6 py-4 border-b text-sm font-medium text-gray-600">
-              {selectedCamera.name} — {selectedCamera.location}
-            </div>
-
-            <div className="h-80 bg-black flex items-center justify-center">
-              {isPlaying && selectedCamera.video ? (
-                <video
-                  key={selectedCamera.video}
-                  src={selectedCamera.video}
-                  controls
-                  autoPlay
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-gray-400">No Live Feed</span>
-              )}
-            </div>
-
-            <div className="p-4 border-t">
-              <button
-                onClick={() => {
-
-                  setDetectedPerson(null);   // clear old result
-                  setIsPlaying(true);
-
-                  fetch("http://localhost:5000/api/start-detection", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      videoPath: selectedCamera.video,
-                      cameraId: selectedCamera.name,
-                      location: selectedCamera.location
-                    })
-                  });
-
-                }}
-                disabled={!selectedCamera.online}
-                className="w-full py-2 rounded-lg text-sm bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
-              >
-                <Play size={16} />
-                Start Detection
-              </button>
-            </div>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Cases Dashboard</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Last updated: {lastRefresh.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+            </p>
           </div>
+          <button
+            onClick={fetchCases}
+            disabled={loading}
+            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 transition disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
 
-          {/* MATCH RESULTS PANEL */}
-          <div className="bg-white rounded-2xl shadow-sm border p-6">
-            <h3 className="text-sm font-semibold text-gray-600 mb-4">
-              MATCH RESULTS
-            </h3>
+        {/* STAT CARDS */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <StatCard icon={<Users className="w-5 h-5 text-blue-600" />} label="Total Cases" value={total} bg="bg-blue-50" />
+          <StatCard icon={<Clock className="w-5 h-5 text-purple-600" />} label="Registered Today" value={today} bg="bg-purple-50" />
+          <StatCard icon={<Camera className="w-5 h-5 text-green-600" />} label="Camera Matched" value={matched} bg="bg-green-50" />
+          <StatCard icon={<AlertTriangle className="w-5 h-5 text-red-600" />} label="High Risk Zones" value={highRisk} bg="bg-red-50" />
+        </div>
 
-            {detectedPerson ? (
-              <div className="flex flex-col items-center text-center">
+        {/* SEARCH */}
+        <div className="relative mb-6 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by name or area..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
 
-                <img
-                  src={detectedPerson.screenshot}
-                  alt="Match"
-                  className="w-64 h-48 object-cover rounded-lg border"
-                />
+        {/* ERROR STATE */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-4 py-3 mb-6 text-sm flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0" />
+            {error} — Make sure the backend is running on port 5000.
+          </div>
+        )}
 
-                <p className="mt-4 text-lg font-semibold text-green-600">
-                  {detectedPerson.name}
-                </p>
+        {/* LOADING STATE */}
+        {loading && !error && (
+          <div className="flex items-center justify-center py-20 text-gray-400 text-sm gap-2">
+            <RefreshCw className="w-4 h-4 animate-spin" />
+            Loading cases...
+          </div>
+        )}
 
-                <p className="text-sm text-gray-500 mt-1">
-                  📍 Last Seen: {detectedPerson.location}
-                </p>
-
-                <p className="text-sm text-gray-500">
-                  🕒 Time: {detectedPerson.time}
-                </p>
-
-                <div className={`mt-4 px-4 py-2 rounded-full text-white text-sm font-medium ${getZoneColor(detectedPerson.zoneAlertness || "MEDIUM")}`}>
-                  🚨 Zone Alertness: {detectedPerson.zoneAlertness || "MEDIUM"}
-                </div>
-
-              </div>
-            ) : (
-              <div className="h-80 flex items-center justify-center text-gray-400 text-sm">
-                No match detected yet
-              </div>
+        {/* EMPTY STATE */}
+        {!loading && !error && filtered.length === 0 && (
+          <div className="text-center py-20 text-gray-400">
+            <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
+            <p className="text-sm font-medium">
+              {search ? "No cases match your search." : "No cases registered yet."}
+            </p>
+            {!search && (
+              <Link to="/#register" className="text-blue-600 text-sm mt-2 inline-block hover:underline">
+                Register the first case →
+              </Link>
             )}
           </div>
+        )}
 
-        </div>
+        {/* CASES TABLE */}
+        {!loading && !error && filtered.length > 0 && (
+          <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b flex items-center justify-between">
+              <h3 className="font-semibold text-gray-800">Registered Cases</h3>
+              <span className="text-xs text-gray-400">{filtered.length} record{filtered.length !== 1 ? "s" : ""}</span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 text-left text-xs text-gray-500 uppercase tracking-wide">
+                    <th className="px-6 py-3">Person</th>
+                    <th className="px-6 py-3">Age / Gender</th>
+                    <th className="px-6 py-3">Last Seen Area</th>
+                    <th className="px-6 py-3">Zone Risk</th>
+                    <th className="px-6 py-3">Camera Match</th>
+                    <th className="px-6 py-3">Registered</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filtered.map((c) => {
+                    const zone = getZoneBadge(c.zoneStatus);
+                    return (
+                      <tr key={c._id} className="hover:bg-gray-50 transition-colors">
+                        {/* Person */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            {c.photo ? (
+                              <img
+                                src={`${BACKEND_URL}/${c.photo?.replace(/\\/g, "/")}`}
+                                alt={c.name}
+                                className="w-9 h-9 rounded-full object-cover border"
+                              />
+                            ) : (
+                              <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-sm">
+                                {c.name.charAt(0).toUpperCase()}
+                              </div>
+                            )}
+                            <span className="font-medium text-gray-900">{c.name}</span>
+                          </div>
+                        </td>
+
+                        {/* Age/Gender */}
+                        <td className="px-6 py-4 text-gray-600">
+                          {c.age} · <span className="capitalize">{c.gender}</span>
+                        </td>
+
+                        {/* Area */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5 text-gray-600">
+                            <MapPin className="w-3.5 h-3.5 text-gray-400" />
+                            {c.area}
+                          </div>
+                        </td>
+
+                        {/* Zone */}
+                        <td className="px-6 py-4">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${zone.cls}`}>
+                            {zone.label}
+                          </span>
+                        </td>
+
+                        {/* Camera Match */}
+                        <td className="px-6 py-4">
+                          {c.cameraMatched && c.cameraMatched !== "null" ? (
+                            <div className="flex items-center gap-1.5 text-green-600">
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              <span className="text-xs font-medium">{c.cameraMatched}</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-xs">No match yet</span>
+                          )}
+                        </td>
+
+                        {/* Date */}
+                        <td className="px-6 py-4 text-gray-400 text-xs">
+                          {formatDate(c.createdAt)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value, bg }: { icon: React.ReactNode; label: string; value: number; bg: string }) {
+  return (
+    <div className={`rounded-2xl p-5 border bg-white shadow-sm flex items-center gap-4`}>
+      <div className={`w-10 h-10 rounded-xl ${bg} flex items-center justify-center shrink-0`}>
+        {icon}
+      </div>
+      <div>
+        <p className="text-2xl font-bold text-gray-900">{value}</p>
+        <p className="text-xs text-gray-500">{label}</p>
       </div>
     </div>
   );

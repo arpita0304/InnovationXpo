@@ -49,6 +49,10 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
+  // ✅ NEW: Scan state
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<{ detected: boolean; message: string } | null>(null);
+
   const fetchCases = async () => {
     setLoading(true);
     setError("");
@@ -66,9 +70,26 @@ export default function Dashboard() {
     console.log("Fetched cases:", data);
   };
 
+  // ✅ NEW: Scan function
+  const runFaceDetection = async () => {
+    setScanning(true);
+    setScanResult(null);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/scan`);
+      const result = await res.json();
+      setScanResult(result);
+      if (result.detected) {
+        alert("🚨 FACE DETECTED! Possible missing person found in CCTV feed.");
+      }
+    } catch (err) {
+      setScanResult({ detected: false, message: "Error connecting to AI module." });
+    } finally {
+      setScanning(false);
+    }
+  };
+
   useEffect(() => {
     fetchCases();
-    // Auto-refresh every 30 seconds
     const interval = setInterval(fetchCases, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -79,7 +100,6 @@ export default function Dashboard() {
       c.area.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Stats
   const total = cases.length;
   const highRisk = cases.filter((c) => c.zoneStatus?.toUpperCase() === "HIGH").length;
   const matched = cases.filter((c) => c.cameraMatched).length;
@@ -119,14 +139,42 @@ export default function Dashboard() {
               Last updated: {lastRefresh.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
             </p>
           </div>
-          <button
-            onClick={fetchCases}
-            disabled={loading}
-            className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 transition disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
+
+          {/* ✅ NEW: Scan button + result badge + refresh button */}
+          <div className="flex items-center gap-3">
+
+            {/* Scan result badge — only shows after a scan */}
+            {scanResult && (
+              <span className={`text-xs font-semibold px-3 py-1.5 rounded-full ${
+                scanResult.detected
+                  ? "bg-red-100 text-red-700"
+                  : "bg-green-100 text-green-700"
+              }`}>
+                {scanResult.detected ? "🚨 " : "✅ "}{scanResult.message}
+              </span>
+            )}
+
+            {/* Scan Feed button */}
+            <button
+              onClick={runFaceDetection}
+              disabled={scanning}
+              className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border bg-blue-600 text-white hover:bg-blue-700 transition disabled:opacity-50"
+            >
+              <Camera className={`w-4 h-4 ${scanning ? "animate-pulse" : ""}`} />
+              {scanning ? "Scanning..." : "Scan Feed"}
+            </button>
+
+            {/* Refresh button */}
+            <button
+              onClick={fetchCases}
+              disabled={loading}
+              className="flex items-center gap-2 text-sm px-4 py-2 rounded-lg border bg-white hover:bg-gray-50 transition disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </button>
+
+          </div>
         </div>
 
         {/* STAT CARDS */}

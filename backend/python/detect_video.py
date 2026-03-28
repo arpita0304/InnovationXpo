@@ -5,7 +5,7 @@ import sys
 import os
 from datetime import datetime
 
-ENCODINGS_FILE = "backend/encodings.pkl"
+ENCODINGS_FILE = "encodings.pkl"  # ✅ Fix 1
 
 video_path = sys.argv[1]
 camera_id = sys.argv[2]
@@ -40,7 +40,6 @@ while True:
     face_encodings = face_recognition.face_encodings(rgb, face_locations)
 
     for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
-
         for person in known_people:
 
             matches = face_recognition.compare_faces(
@@ -51,12 +50,10 @@ while True:
 
             if matches[0]:
 
-                # 🔥 Draw Green Box
-                cv2.rectangle(frame, (left, top), (right, bottom), (0,255,0), 3)
-                cv2.putText(frame, person["name"], (left, top-10),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0,255,0), 2)
+                cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 3)
+                cv2.putText(frame, person["name"], (left, top - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
 
-                # 🔥 Save Screenshot
                 os.makedirs("uploads", exist_ok=True)
 
                 now = datetime.now()
@@ -64,27 +61,19 @@ while True:
                 readable_time = now.strftime("%H:%M:%S")
 
                 filename = f"uploads/match_{person['person_id']}_{timestamp}.jpg"
+                filename = filename.replace("\\", "/")  # ✅ Fix 3
                 cv2.imwrite(filename, frame)
 
-                # ==========================
-                # 🔥 ZONE ALERT CALCULATION
-                # ==========================
-
+                # Zone calculation
                 hour = now.hour
                 zone = "LOW"
 
-                # Night time high alert
                 if hour >= 20 or hour <= 5:
                     zone = "HIGH"
-
-                # Location based alert
                 elif "Highway" in location or "Railway" in location:
                     zone = "HIGH"
-
                 elif "Mall" in location or "College" in location:
                     zone = "MEDIUM"
-
-                # ==========================
 
                 print(f"MATCH|{person['name']}|{camera_id}|{location}|{filename}|{video_path}|{readable_time}|{zone}")
                 sys.stdout.flush()

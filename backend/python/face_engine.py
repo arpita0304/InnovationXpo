@@ -2,7 +2,7 @@ import face_recognition
 import pickle
 import os
 
-ENCODINGS_FILE = "backend/encodings.pkl"
+ENCODINGS_FILE = "encodings.pkl"  # ✅ Only change
 
 def encode_face(image_path, person_id, name):
     image = face_recognition.load_image_file(image_path)

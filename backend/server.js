@@ -120,7 +120,7 @@ app.post("/api/start-detection", (req, res) => {
 
         const parts = result.split("|");
 
-        // 🔥 Zone Alertness Logic (customize if needed)
+        // 🔥 Zone Alertness Logic
         let zoneAlertness = "MEDIUM";
 
         if (location.toLowerCase().includes("gate")) {
@@ -161,6 +161,50 @@ app.post("/api/start-detection", (req, res) => {
     console.error(error);
     res.status(500).json({ error: "Detection Failed" });
   }
+
+});
+
+
+// ======================================================
+// 🔥 SIMPLE FACE SCAN (for dashboard demo button)
+// ======================================================
+
+app.get("/api/scan", (req, res) => {
+
+  // Optional: accept a video path via query param, e.g. /api/scan?video=cameras/cam1.mp4
+  // Falls back to a default test video if none provided
+  const videoPath = req.query.video
+    ? path.join(__dirname, req.query.video)
+    : path.join(__dirname, "ai_module/cam01.mp4");
+
+  const scriptPath = path.join(__dirname, "ai_module/detect.py");
+
+  const python = spawn("py", ["-3.10", scriptPath, videoPath]);
+
+  let output = "";
+  let errorOutput = "";
+
+  python.stdout.on("data", (data) => {
+    output += data.toString();
+    console.log("SCAN PYTHON:", data.toString());
+  });
+
+  python.stderr.on("data", (data) => {
+    errorOutput += data.toString();
+    console.error("SCAN PYTHON ERROR:", data.toString());
+  });
+
+  python.on("close", (code) => {
+    if (output.includes("FACE_DETECTED")) {
+      return res.json({ detected: true, message: "Face detected in video feed!" });
+    } else {
+      return res.json({ detected: false, message: "No face detected." });
+    }
+  });
+
+  python.on("error", (err) => {
+    return res.status(500).json({ error: "Failed to run AI script: " + err.message });
+  });
 
 });
 
